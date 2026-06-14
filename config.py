@@ -11,7 +11,7 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")   # BotFather 給的 token
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")  # 你的 chat id
 
 # 要追蹤的科技巨頭股票（美股）
-TECH_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "MU", "ORCL", "AVGO", "MRVL", "SPCX" , "ASML"]
+TECH_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "MU", "ORCL", "AVGO", "MRVL", "SPCX" , "ASML", "DELL", "AMD", "ARM"]
 
 # 台股追蹤清單（用於提示，財報日以公司公告為準）
 TW_STOCKS = ["2330", "2454", "2317", "2308", "8299", "3665", "6147"]  # 台積電、聯發科、鴻海
