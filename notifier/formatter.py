@@ -1,11 +1,13 @@
 """
 訊息格式化模組（純文字版，相容所有 Telegram 設定）
+拆成兩則訊息發送，避免超過 Telegram 4096 字元上限
 """
 from datetime import datetime, timedelta
 from config import LOOKAHEAD_DAYS
 
 
-def format_weekly_report(fomc_events: list, earnings_events: list, trump_news: list) -> str:
+def format_main_report(fomc_events: list, earnings_events: list, trump_news: list) -> str:
+    """第一則訊息：FOMC、財報、新聞列表（不含 AI 心得）"""
     today = datetime.today()
     two_weeks_later = today + timedelta(days=LOOKAHEAD_DAYS)
 
@@ -45,6 +47,50 @@ def format_weekly_report(fomc_events: list, earnings_events: list, trump_news: l
         lines.append("  本週無相關要聞")
 
     lines.append("\n" + "=" * 30)
+    lines.append("👉 AI 綜合心得將於下一則訊息發送")
+
+    return "\n".join(lines)
+
+
+def format_insight_report(overall_insight: str) -> str:
+    """第二則訊息：AI 綜合心得（獨立發送，避免超字數限制）"""
+    if not overall_insight:
+        return ""
+
+    lines = []
+    lines.append("🧠 AI 綜合心得分析")
+    lines.append("=" * 30)
+    lines.append(overall_insight)
+    lines.append("\n" + "=" * 30)
     lines.append("下次更新：明天凌晨00:00")
 
     return "\n".join(lines)
+
+
+def split_long_message(text: str, limit: int = 4000) -> list[str]:
+    """
+    若單則訊息仍超過 Telegram 限制，依長度切成多段
+    保留安全邊界（4000 而非 4096），避免邊界誤差
+    """
+    if len(text) <= limit:
+        return [text]
+
+    chunks = []
+    while len(text) > limit:
+        # 盡量在換行處切斷，避免斷在句子中間
+        split_at = text.rfind("\n", 0, limit)
+        if split_at == -1:
+            split_at = limit
+        chunks.append(text[:split_at])
+        text = text[split_at:].lstrip("\n")
+    if text:
+        chunks.append(text)
+    return chunks
+
+
+# 保留舊函式名稱以相容（若有其他地方呼叫到舊版 format_weekly_report）
+def format_weekly_report(fomc_events: list, earnings_events: list, trump_news: list, overall_insight: str = "") -> str:
+    """舊版相容函式：回傳合併內容（不建議使用，請改用 format_main_report + format_insight_report）"""
+    main = format_main_report(fomc_events, earnings_events, trump_news)
+    insight = format_insight_report(overall_insight)
+    return main + "\n\n" + insight if insight else main

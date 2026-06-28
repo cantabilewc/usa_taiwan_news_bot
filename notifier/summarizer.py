@@ -58,3 +58,52 @@ def summarize_all_news(news_list: list[dict]) -> list[dict]:
         news_copy["ai_summary"] = ai_summary
         results.append(news_copy)
     return results
+
+
+def generate_overall_insight(news_list: list[dict]) -> str:
+    """
+    針對整批新聞（含標題與摘要），生成一段約 1000 字的綜合心得分析
+    內容包含股市影響層級評估（高/中/低）與重點產業影響
+    若 API 未設定或呼叫失敗，回傳空字串（formatter 會自動跳過該區塊）
+    """
+    if not ANTHROPIC_API_KEY or not news_list:
+        return ""
+
+    # 把所有新聞標題+摘要整理成一份內容餵給模型
+    combined = "\n\n".join(
+        f"標題：{n.get('title', '')}\n摘要：{n.get('summary', '') or n.get('ai_summary', '')}"
+        for n in news_list
+    )
+
+    prompt = (
+        "以下是過去一週與川普政策相關的數則新聞標題與摘要。"
+        "請你以財經/政策觀察者的角度，針對這些新聞寫一段約 1000 字的繁體中文綜合心得，內容須包含：\n"
+        "1. 這些事件之間的關聯性\n"
+        "2. 對台美股市的影響評估，並標示「影響層級」（分為：高／中／低），說明評斷理由\n"
+        "3. 對重點產業或個股類型可能造成的影響（例如：半導體、AI硬體、傳產等）\n"
+        "4. 值得關注的後續發展\n"
+        "請直接輸出心得內容，不要加標題或前言：\n\n"
+        f"{combined}"
+    )
+
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": MODEL,
+        "max_tokens": 2500,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    try:
+        resp = requests.post(API_URL, headers=headers, json=payload, timeout=45)
+        resp.raise_for_status()
+        data = resp.json()
+        text_blocks = [b["text"] for b in data.get("content", []) if b.get("type") == "text"]
+        result = "".join(text_blocks).strip()
+        return result
+    except Exception as e:
+        print(f"⚠️ 綜合心得生成失敗：{e}")
+        return ""
