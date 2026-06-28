@@ -60,30 +60,67 @@ def summarize_all_news(news_list: list[dict]) -> list[dict]:
     return results
 
 
-def generate_overall_insight(news_list: list[dict]) -> str:
+def generate_overall_insight(news_list: list[dict], stock_performance: dict = None) -> str:
     """
-    針對整批新聞（含標題與摘要），生成一段約 1000 字的綜合心得分析
+    結合川普政策新聞 + 台美股近期股價表現，生成約 1000 字綜合心得分析
     內容包含股市影響層級評估（高/中/低）與重點產業影響
-    若 API 未設定或呼叫失敗，回傳空字串（formatter 會自動跳過該區塊）
+    若 API 未設定，回傳空字串（formatter 會自動跳過該區塊）
+
+    stock_performance 格式：{"us": [...], "tw": [...]}（來自 fetch_all_stock_performance）
     """
-    if not ANTHROPIC_API_KEY or not news_list:
+    if not ANTHROPIC_API_KEY:
         return ""
 
-    # 把所有新聞標題+摘要整理成一份內容餵給模型
-    combined = "\n\n".join(
-        f"標題：{n.get('title', '')}\n摘要：{n.get('summary', '') or n.get('ai_summary', '')}"
-        for n in news_list
-    )
+    # 川普新聞部分（精簡，只當作背景脈絡，不要佔太多篇幅）
+    news_section = "（本週無相關要聞）"
+    if news_list:
+        news_section = "\n\n".join(
+            f"標題：{n.get('title', '')}\n摘要：{n.get('summary', '') or n.get('ai_summary', '')}"
+            for n in news_list
+        )
+
+    # 股價表現部分（依分類呈現）
+    stock_section = "（無股價資料）"
+    if stock_performance:
+        lines = []
+        us_categories = stock_performance.get("us", {})
+        tw_categories = stock_performance.get("tw", {})
+
+        if us_categories:
+            lines.append("【美股】")
+            for category, stocks in us_categories.items():
+                lines.append(f"◆ {category}")
+                for s in stocks:
+                    lines.append(
+                        f"  {s['name']}：現價 {s['latest_price']}，"
+                        f"近7日 {s['change_7d']:+.2f}%，近30日 {s['change_30d']:+.2f}%"
+                    )
+        if tw_categories:
+            lines.append("【台股】")
+            for category, stocks in tw_categories.items():
+                lines.append(f"◆ {category}")
+                for s in stocks:
+                    lines.append(
+                        f"  {s['name']}({s['ticker']})：現價 {s['latest_price']}，"
+                        f"近7日 {s['change_7d']:+.2f}%，近30日 {s['change_30d']:+.2f}%"
+                    )
+        if lines:
+            stock_section = "\n".join(lines)
 
     prompt = (
-        "以下是過去一週與川普政策相關的數則新聞標題與摘要。"
-        "請你以財經/政策觀察者的角度，針對這些新聞寫一段約 1000 字的繁體中文綜合心得，內容須包含：\n"
-        "1. 這些事件之間的關聯性\n"
-        "2. 對台美股市的影響評估，並標示「影響層級」（分為：高／中／低），說明評斷理由\n"
-        "3. 對重點產業或個股類型可能造成的影響（例如：半導體、AI硬體、傳產等）\n"
-        "4. 值得關注的後續發展\n"
+        "你是一位財經觀察者，請根據以下兩組資料，寫一段約 1200 字的繁體中文綜合心得：\n"
+        "（A）過去一週與川普政策相關的新聞（僅供背景參考）\n"
+        "（B）台美股科技權值股近期股價表現，已依產業分類整理（7日/30日漲跌幅）\n\n"
+        "請將大部分篇幅放在【股價表現分析】上，依產業分類逐一點評，川普政策新聞僅作為背景脈絡簡要提及即可。"
+        "內容須包含：\n"
+        "1. 依產業分類，點出各類別中表現最強與最弱的標的，並說明可能原因\n"
+        "2. 台股與美股同類產業（如台積電vs.美系半導體）的連動性觀察\n"
+        "3. 川普政策動向對這些股價走勢可能的關聯（簡要說明即可，1-2句帶過）\n"
+        "4. 對台美股市未來走向的影響評估，標示「影響層級」（高／中／低）並說明理由\n"
+        "5. 最值得關注的1-2個產業類別或個股，並說明原因\n"
         "請直接輸出心得內容，不要加標題或前言：\n\n"
-        f"{combined}"
+        f"【A. 川普政策新聞】\n{news_section}\n\n"
+        f"【B. 台美股股價表現（依產業分類）】\n{stock_section}"
     )
 
     headers = {
@@ -93,7 +130,7 @@ def generate_overall_insight(news_list: list[dict]) -> str:
     }
     payload = {
         "model": MODEL,
-        "max_tokens": 2500,
+        "max_tokens": 3000,
         "messages": [{"role": "user", "content": prompt}],
     }
 

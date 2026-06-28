@@ -4,14 +4,16 @@
 """
 import feedparser
 from datetime import datetime, timedelta, timezone
-from config import RSS_FEEDS, TRUMP_KEYWORDS
+from config import RSS_FEEDS, TRUMP_KEYWORDS, TRUMP_NEWS_MAX_ITEMS
 
 
-def fetch_trump_news(max_items: int = 5) -> list[dict]:
+def fetch_trump_news(max_items: int = None) -> list[dict]:
     """
     從 RSS 抓取川普相關重要新聞（過去 7 天 + 未來預告）
     回傳格式：[{"date": "2025-06-15", "title": "...", "url": "..."}, ...]
     """
+    if max_items is None:
+        max_items = TRUMP_NEWS_MAX_ITEMS
     one_week_ago = datetime.now(timezone.utc) - timedelta(days=7)
     results = []
     seen_titles = set()
@@ -42,9 +44,16 @@ def fetch_trump_news(max_items: int = 5) -> list[dict]:
                     if published:
                         date_str = f"{published[0]}-{published[1]:02d}-{published[2]:02d}"
 
+                    # 清理摘要：去除 HTML 標籤，截斷長度
+                    import re
+                    clean_summary = re.sub(r"<[^>]+>", "", summary).strip()
+                    if len(clean_summary) > 150:
+                        clean_summary = clean_summary[:150] + "..."
+
                     results.append({
                         "date": date_str,
                         "title": title[:80] + ("..." if len(title) > 80 else ""),
+                        "summary": clean_summary,
                         "url": link,
                     })
 

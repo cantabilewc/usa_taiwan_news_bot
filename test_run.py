@@ -1,11 +1,11 @@
 """
 立即測試腳本：不等排程，直接跑一次完整流程
-分兩則訊息發送：主報告 + AI 綜合心得
 執行方式：python test_run.py
 """
 from fetchers.fomc import fetch_fomc_dates
 from fetchers.earnings import fetch_earnings_dates
 from fetchers.trump_news import fetch_trump_news
+from fetchers.stock_performance import fetch_all_stock_performance
 from notifier.summarizer import summarize_all_news, generate_overall_insight
 from notifier.formatter import format_main_report, format_insight_report, split_long_message
 from notifier.telegram import send_telegram_message
@@ -26,12 +26,16 @@ def main():
     news = fetch_trump_news()
     print(f"   找到 {len(news)} 則新聞")
 
-    print("4️⃣  生成 AI 逐則摘要...")
+    print("4️⃣  抓取台美股近期股價表現...")
+    stock_perf = fetch_all_stock_performance()
+    print(f"   美股 {len(stock_perf['us'])} 筆，台股 {len(stock_perf['tw'])} 筆")
+
+    print("5️⃣  生成 AI 逐則新聞摘要...")
     news = summarize_all_news(news)
     print(f"   完成 {len(news)} 則摘要")
 
-    print("5️⃣  生成 AI 綜合心得（約1000字）...")
-    insight = generate_overall_insight(news)
+    print("6️⃣  生成 AI 綜合心得（股價分析為主，約1000字）...")
+    insight = generate_overall_insight(news, stock_performance=stock_perf)
     print(f"   完成，長度 {len(insight)} 字" if insight else "   略過（無內容或API未設定）")
 
     main_message = format_main_report(fomc, earnings, news)
