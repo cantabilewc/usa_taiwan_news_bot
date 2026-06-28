@@ -5,6 +5,7 @@
 from fetchers.fomc import fetch_fomc_dates
 from fetchers.earnings import fetch_earnings_dates
 from fetchers.trump_news import fetch_trump_news
+from notifier.summarizer import summarize_all_news
 from notifier.formatter import format_weekly_report
 from notifier.telegram import send_telegram_message
 
@@ -24,7 +25,11 @@ def main():
     news = fetch_trump_news()
     print(f"   找到 {len(news)} 則新聞")
 
-    print("\n4️⃣  組合訊息...")
+    print("4️⃣  生成 AI 中文摘要...")
+    news = summarize_all_news(news)
+    print(f"   完成 {len(news)} 則摘要")
+
+    print("\n5️⃣  組合訊息...")
     message = format_weekly_report(fomc, earnings, news)
     print("\n--- 預覽訊息 ---")
     print(message)

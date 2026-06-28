@@ -36,8 +36,11 @@ def format_weekly_report(fomc_events: list, earnings_events: list, trump_news: l
         for i, news in enumerate(trump_news, 1):
             date_prefix = f"[{news['date']}] " if news["date"] else ""
             lines.append(f"  {i}. {date_prefix}{news['title']}")
+            summary_text = news.get("ai_summary") or news.get("summary")
+            if summary_text:
+                lines.append(f"     💬 {summary_text}")
             if news.get("url"):
-                lines.append(f"     {news['url']}")
+                lines.append(f"     🔗 {news['url']}")
     else:
         lines.append("  本週無相關要聞")
 

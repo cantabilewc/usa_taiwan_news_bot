@@ -10,6 +10,9 @@ load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")   # BotFather 給的 token
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")  # 你的 chat id
 
+# Anthropic API（用於 AI 新聞摘要）
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
 # 要追蹤的科技巨頭股票（美股）
 TECH_TICKERS = ["LITE", "INTC", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "MU", "ORCL", "AVGO", "MRVL", "SPCX" , "ASML", "DELL", "AMD", "ARM"]
 

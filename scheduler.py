@@ -9,6 +9,7 @@ from config import SCHEDULE_DAY, SCHEDULE_HOUR, SCHEDULE_MINUTE
 from fetchers.fomc import fetch_fomc_dates
 from fetchers.earnings import fetch_earnings_dates
 from fetchers.trump_news import fetch_trump_news
+from notifier.summarizer import summarize_all_news
 from notifier.formatter import format_weekly_report
 from notifier.telegram import send_telegram_message
 
@@ -20,6 +21,9 @@ def run_weekly_job():
     fomc_events = fetch_fomc_dates()
     earnings_events = fetch_earnings_dates()
     trump_news = fetch_trump_news()
+
+    print("🤖 正在生成 AI 摘要...")
+    trump_news = summarize_all_news(trump_news)
 
     message = format_weekly_report(fomc_events, earnings_events, trump_news)
     send_telegram_message(message)
